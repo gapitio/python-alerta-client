@@ -492,6 +492,9 @@ class Client:
         if response.status_code != 200:
             raise UnknownError(response.text)
 
+    def escalate(self):
+        self.http.session.get('escalate', auth=self.http.auth)
+
 
 class ApiKeyAuth(AuthBase):
 
