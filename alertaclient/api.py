@@ -493,7 +493,7 @@ class Client:
             raise UnknownError(response.text)
 
     def escalate(self):
-        self.http.get('/escalate', auth=self.http.auth)
+        self.http.session.get(self.http.endpoint + '/escalate', auth=self.http.auth, timeout=self.http.timeout)
 
 
 class ApiKeyAuth(AuthBase):
