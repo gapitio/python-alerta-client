@@ -495,6 +495,9 @@ class Client:
     def escalate(self):
         self.http.session.get(self.http.endpoint + '/escalate', auth=self.http.auth, timeout=self.http.timeout)
 
+    def reactivate_notification_rules(self):
+        self.http.session.get(self.http.endpoint + '/notificationrules/reactivate', auth=self.http.auth, timeout=self.http.timeout)
+
 
 class ApiKeyAuth(AuthBase):
 
