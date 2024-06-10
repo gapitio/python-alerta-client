@@ -498,6 +498,9 @@ class Client:
     def reactivate_notification_rules(self):
         self.http.session.get(self.http.endpoint + '/notificationrules/reactivate', auth=self.http.auth, timeout=self.http.timeout)
 
+    def fire_delayed_notifications(self):
+        self.http.session.get(self.http.endpoint + '/notificationdelay/fire', auth=self.http.auth, timeout=self.http.timeout)
+
 
 class ApiKeyAuth(AuthBase):
 
