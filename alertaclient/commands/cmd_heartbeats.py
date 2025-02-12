@@ -6,6 +6,7 @@ from tabulate import tabulate
 from alertaclient.models.heartbeat import Heartbeat
 from alertaclient.utils import origin
 
+from time import sleep
 
 @click.command('heartbeats', short_help='List heartbeats')
 @click.option('--alert', is_flag=True, help='Alert on stale or slow heartbeats')
@@ -54,9 +55,9 @@ def cli(obj, alert, severity, timeout, purge):
 
     if alert:
         with click.progressbar(heartbeats, label=f'Alerting {len(heartbeats)} heartbeats') as bar:
-            alerts = client.get_alerts(query=[('event', '~Heartbeat')], page_size='ALL')
+            alerts = client.get_alerts(query=[('service', 'Alerta')], page_size=len(heartbeats))
             for b in bar:
-                want_environment = 'Heartbeats'
+                want_environment = b.attributes.pop('environment', 'Heartbeats')
                 want_severity = b.attributes.pop('severity', severity)
                 want_service = b.attributes.pop('service', ['Alerta'])
                 want_group = b.attributes.pop('group', 'System')
@@ -82,15 +83,30 @@ def cli(obj, alert, severity, timeout, purge):
                 }
 
                 state = state_map[b.status]
-                alert = None
-                # Find heartbeat alert in existing alerts
-                for a in alerts:
-                    if a.environment == want_environment and a.resource == b.origin:
-                        alert = alerts.pop(alerts.index(a))
+                alert_exists = False
+                for alert in alerts:
+                    if alert.environment == want_environment and alert.resource == b.origin:
+                        alert_exists = True
+                        if state['event'] != alert.event:
+                            client.send_alert(
+                                resource=b.origin,
+                                event=state['event'],
+                                environment=want_environment,
+                                severity=state['severity'],
+                                correlate=['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
+                                service=want_service,
+                                group=want_group,
+                                value=state['value'],
+                                text=state['text'],
+                                tags=b.tags,
+                                attributes=b.attributes,
+                                origin=origin(),
+                                type='heartbeatAlert',
+                                timeout=timeout,
+                                customer=b.customer
+                            )
                         break
-
-                # Only send in new/updated alert
-                if alert is None or state['event'] != alert.event:
+                if not alert_exists:
                     client.send_alert(
                         resource=b.origin,
                         event=state['event'],
