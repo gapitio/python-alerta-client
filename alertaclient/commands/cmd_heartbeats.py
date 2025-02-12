@@ -6,7 +6,7 @@ from tabulate import tabulate
 from alertaclient.models.heartbeat import Heartbeat
 from alertaclient.utils import origin
 
-from time import sleep
+from datetime import datetime
 
 @click.command('heartbeats', short_help='List heartbeats')
 @click.option('--alert', is_flag=True, help='Alert on stale or slow heartbeats')
@@ -16,6 +16,7 @@ from time import sleep
 @click.pass_obj
 def cli(obj, alert, severity, timeout, purge):
     """List heartbeats."""
+    start = datetime.now()
     client = obj['client']
 
     try:
@@ -55,7 +56,9 @@ def cli(obj, alert, severity, timeout, purge):
 
     if alert:
         with click.progressbar(heartbeats, label=f'Alerting {len(heartbeats)} heartbeats') as bar:
-            alerts = client.get_alerts(query=[('service', 'Alerta')], page_size=len(heartbeats))
+            alerts = client.get_alerts(query=[('environment', 'Heartbeats')], page_size=len(heartbeats))
+            new_alerts = []
+
             for b in bar:
                 want_environment = b.attributes.pop('environment', 'Heartbeats')
                 want_severity = b.attributes.pop('severity', severity)
@@ -88,44 +91,49 @@ def cli(obj, alert, severity, timeout, purge):
                     if alert.environment == want_environment and alert.resource == b.origin:
                         alert_exists = True
                         if state['event'] != alert.event:
-                            client.send_alert(
-                                resource=b.origin,
-                                event=state['event'],
-                                environment=want_environment,
-                                severity=state['severity'],
-                                correlate=['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
-                                service=want_service,
-                                group=want_group,
-                                value=state['value'],
-                                text=state['text'],
-                                tags=b.tags,
-                                attributes=b.attributes,
-                                origin=origin(),
-                                type='heartbeatAlert',
-                                timeout=timeout,
-                                customer=b.customer
+                            new_alerts.append(
+                                {
+                                    'resource': b.origin,
+                                    'event': state['event'],
+                                    'environment': want_environment,
+                                    'severity': state['severity'],
+                                    'correlate': ['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
+                                    'service': want_service,
+                                    'group': want_group,
+                                    'value': state['value'],
+                                    'text': state['text'],
+                                    'tags': b.tags,
+                                    'attributes': b.attributes,
+                                    'origin': origin(),
+                                    'type': 'heartbeatAlert',
+                                    'timeout': timeout,
+                                    'customer': b.customer
+                                }
                             )
                         break
                 if not alert_exists:
-                    client.send_alert(
-                        resource=b.origin,
-                        event=state['event'],
-                        environment=want_environment,
-                        severity=state['severity'],
-                        correlate=['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
-                        service=want_service,
-                        group=want_group,
-                        value=state['value'],
-                        text=state['text'],
-                        tags=b.tags,
-                        attributes=b.attributes,
-                        origin=origin(),
-                        type='heartbeatAlert',
-                        timeout=timeout,
-                        customer=b.customer
+                    new_alerts.append(
+                        {
+                            'resource': b.origin,
+                            'event': state['event'],
+                            'environment': want_environment,
+                            'severity': state['severity'],
+                            'correlate': ['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
+                            'service': want_service,
+                            'group': want_group,
+                            'value': state['value'],
+                            'text': state['text'],
+                            'tags': b.tags,
+                            'attributes': b.attributes,
+                            'origin': origin(),
+                            'type': 'heartbeatAlert',
+                            'timeout': timeout,
+                            'customer': b.customer
+                        }
                     )
 
-        # Remove unused/old heartbeat alerts, there is no heartbeat matching the alert
-        with click.progressbar(alerts, label=f'Removing {len(alerts)} old alerts') as bar:
-            for alert in bar:
-                client.delete_alert(alert.id)
+            if len(new_alerts) > 0:
+                client.send_alerts(new_alerts)
+            end = datetime.now()
+            print('\n')
+            print(end - start)
