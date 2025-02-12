@@ -6,6 +6,7 @@ from tabulate import tabulate
 from alertaclient.models.heartbeat import Heartbeat
 from alertaclient.utils import origin
 
+from time import sleep
 
 @click.command('heartbeats', short_help='List heartbeats')
 @click.option('--alert', is_flag=True, help='Alert on stale or slow heartbeats')
