@@ -6,7 +6,7 @@ from tabulate import tabulate
 from alertaclient.models.heartbeat import Heartbeat
 from alertaclient.utils import origin
 
-from time import sleep
+from datetime import datetime
 
 @click.command('heartbeats', short_help='List heartbeats')
 @click.option('--alert', is_flag=True, help='Alert on stale or slow heartbeats')
@@ -16,6 +16,7 @@ from time import sleep
 @click.pass_obj
 def cli(obj, alert, severity, timeout, purge):
     """List heartbeats."""
+    start = datetime.now()
     client = obj['client']
 
     try:
