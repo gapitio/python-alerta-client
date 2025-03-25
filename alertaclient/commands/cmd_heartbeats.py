@@ -54,60 +54,68 @@ def cli(obj, alert, severity, timeout, purge):
 
     if alert:
         with click.progressbar(heartbeats, label=f'Alerting {len(heartbeats)} heartbeats') as bar:
+            alerts = client.get_alerts(query=[('environment', 'Heartbeats')], page_size=len(heartbeats))
             for b in bar:
-
-                want_environment = b.attributes.pop('environment', 'Production')
+                want_environment = b.attributes.pop('environment', 'Heartbeats')
                 want_severity = b.attributes.pop('severity', severity)
                 want_service = b.attributes.pop('service', ['Alerta'])
                 want_group = b.attributes.pop('group', 'System')
+                state_map = {
+                    'expired': {
+                        'event': 'HeartbeatFail',
+                        'value': f'{b.since}',
+                        'text': f'Heartbeat not received in {b.timeout} seconds',
+                        'severity': want_severity
+                    },
+                    'slow': {
+                        'event': 'HeartbeatSlow',
+                        'value': f'{b.latency}ms',
+                        'text': f'Heartbeat took more than {b.max_latency}ms to be processed',
+                        'severity': want_severity
+                    },
+                    'ok': {
+                        'event': 'HeartbeatOK',
+                        'value': '',
+                        'text': 'Heartbeat OK',
+                        'severity': default_normal_severity
+                    }
+                }
 
-                if b.status == 'expired':  # aka. "stale"
+                state = state_map[b.status]
+                alert_exists = False
+                for alert in alerts:
+                    if alert.environment == want_environment and alert.resource == b.origin:
+                        alert_exists = True
+                        if state['event'] != alert.event:
+                            client.send_alert(
+                                resource=b.origin,
+                                event=state['event'],
+                                environment=want_environment,
+                                severity=state['severity'],
+                                correlate=['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
+                                service=want_service,
+                                group=want_group,
+                                value=state['value'],
+                                text=state['text'],
+                                tags=b.tags,
+                                attributes=b.attributes,
+                                origin=origin(),
+                                type='heartbeatAlert',
+                                timeout=timeout,
+                                customer=b.customer
+                            )
+                        break
+                if not alert_exists:
                     client.send_alert(
                         resource=b.origin,
-                        event='HeartbeatFail',
+                        event=state['event'],
                         environment=want_environment,
-                        severity=want_severity,
+                        severity=state['severity'],
                         correlate=['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
                         service=want_service,
                         group=want_group,
-                        value=f'{b.since}',
-                        text=f'Heartbeat not received in {b.timeout} seconds',
-                        tags=b.tags,
-                        attributes=b.attributes,
-                        origin=origin(),
-                        type='heartbeatAlert',
-                        timeout=timeout,
-                        customer=b.customer
-                    )
-                elif b.status == 'slow':
-                    client.send_alert(
-                        resource=b.origin,
-                        event='HeartbeatSlow',
-                        environment=want_environment,
-                        severity=want_severity,
-                        correlate=['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
-                        service=want_service,
-                        group=want_group,
-                        value=f'{b.latency}ms',
-                        text=f'Heartbeat took more than {b.max_latency}ms to be processed',
-                        tags=b.tags,
-                        attributes=b.attributes,
-                        origin=origin(),
-                        type='heartbeatAlert',
-                        timeout=timeout,
-                        customer=b.customer
-                    )
-                else:
-                    client.send_alert(
-                        resource=b.origin,
-                        event='HeartbeatOK',
-                        environment=want_environment,
-                        severity=default_normal_severity,
-                        correlate=['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
-                        service=want_service,
-                        group=want_group,
-                        value='',
-                        text='Heartbeat OK',
+                        value=state['value'],
+                        text=state['text'],
                         tags=b.tags,
                         attributes=b.attributes,
                         origin=origin(),
