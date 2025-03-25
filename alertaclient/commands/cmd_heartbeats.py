@@ -131,9 +131,11 @@ def cli(obj, alert, severity, timeout, purge):
                             'customer': b.customer
                         }
                     )
-
-            if len(new_alerts) > 0:
-                client.send_alerts(new_alerts)
+            number_of_co = 200
+            number_of_alerts = len(new_alerts)
+            number_of_sends = number_of_alerts // number_of_co
+            for i in range(number_of_sends):
+                client.send_alerts(new_alerts[i * number_of_co:(i + 1) * number_of_co])
+            if number_of_alerts % number_of_co:
+                client.send_alerts(new_alerts[number_of_co * number_of_sends:number_of_co * number_of_sends + number_of_alerts % number_of_co])
             end = datetime.now()
-            print('\n')
-            print(end - start)
