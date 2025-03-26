@@ -6,7 +6,6 @@ from tabulate import tabulate
 from alertaclient.models.heartbeat import Heartbeat
 from alertaclient.utils import origin
 
-from datetime import datetime
 
 @click.command('heartbeats', short_help='List heartbeats')
 @click.option('--alert', is_flag=True, help='Alert on stale or slow heartbeats')
@@ -16,7 +15,6 @@ from datetime import datetime
 @click.pass_obj
 def cli(obj, alert, severity, timeout, purge):
     """List heartbeats."""
-    start = datetime.now()
     client = obj['client']
 
     try:
@@ -55,7 +53,7 @@ def cli(obj, alert, severity, timeout, purge):
                 client.delete_heartbeat(b.id)
 
     if alert:
-        with click.progressbar(heartbeats, label=f'Alerting {len(heartbeats)} heartbeats') as bar:
+        with click.progressbar(heartbeats, label=f'Checking {len(heartbeats)} heartbeats') as bar:
             alerts = client.get_alerts(query=[('environment', 'Heartbeats')], page_size=len(heartbeats))
             new_alerts = []
 
@@ -112,11 +110,14 @@ def cli(obj, alert, severity, timeout, purge):
                             'customer': b.customer
                         }
                     )
-            number_of_co = 200
-            number_of_alerts = len(new_alerts)
-            number_of_sends = number_of_alerts // number_of_co
-            for i in range(number_of_sends):
-                client.send_alerts(new_alerts[i * number_of_co:(i + 1) * number_of_co])
-            if number_of_alerts % number_of_co:
-                client.send_alerts(new_alerts[number_of_co * number_of_sends:number_of_co * number_of_sends + number_of_alerts % number_of_co])
-            end = datetime.now()
+
+        number_of_co = 200
+        number_of_alerts = len(new_alerts)
+        number_of_sends = number_of_alerts // number_of_co
+        alert_groups = [new_alerts[i * number_of_co:(i + 1) * number_of_co] for i in range(number_of_sends)]
+        if number_of_alerts % number_of_co:
+            alert_groups.append(new_alerts[number_of_co * number_of_sends:number_of_co * number_of_sends + number_of_alerts % number_of_co])
+
+        with click.progressbar(alert_groups, label=f'Alerting {len(new_alerts)} heartbeats') as bar:
+            for b in bar:
+                client.send_alerts(b)
