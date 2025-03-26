@@ -86,32 +86,13 @@ def cli(obj, alert, severity, timeout, purge):
                 }
 
                 state = state_map[b.status]
-                alert_exists = False
-                for alert in alerts:
-                    if alert.environment == want_environment and alert.resource == b.origin:
-                        alert_exists = True
-                        if state['event'] != alert.event:
-                            new_alerts.append(
-                                {
-                                    'resource': b.origin,
-                                    'event': state['event'],
-                                    'environment': want_environment,
-                                    'severity': state['severity'],
-                                    'correlate': ['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
-                                    'service': want_service,
-                                    'group': want_group,
-                                    'value': state['value'],
-                                    'text': state['text'],
-                                    'tags': b.tags,
-                                    'attributes': b.attributes,
-                                    'origin': origin(),
-                                    'type': 'heartbeatAlert',
-                                    'timeout': timeout,
-                                    'customer': b.customer
-                                }
-                            )
+                found_alert = None
+                for a in alerts:
+                    if a.environment == want_environment and a.resource == b.origin:
+                        found_alert = alerts.pop(alerts.index(a))
                         break
-                if not alert_exists:
+
+                if found_alert is None or state['event'] != found_alert.event:
                     new_alerts.append(
                         {
                             'resource': b.origin,
