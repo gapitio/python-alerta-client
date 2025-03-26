@@ -111,7 +111,7 @@ def cli(obj, alert, severity, timeout, purge):
                         }
                     )
 
-        number_of_co = 200
+        number_of_co = 100
         number_of_alerts = len(new_alerts)
         number_of_sends = number_of_alerts // number_of_co
         alert_groups = [new_alerts[i * number_of_co:(i + 1) * number_of_co] for i in range(number_of_sends)]
