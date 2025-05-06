@@ -106,6 +106,20 @@ def cli(obj, alert, severity, timeout, purge):
                             )
                         break
                 if not alert_exists:
+                    old_alerts = client.get_alerts(
+                        query=[
+                            ('environment', 'Production'),
+                            ('event', 'HeartbeatFail'),
+                            ('event', 'HeartbeatSlow'),
+                            ('event', 'HeartbeatOK'),
+                            ('resource', b.origin)
+                        ],
+                        page_size=len(heartbeats)
+                    )
+
+                    for old_alert in old_alerts:
+                        client.delete_alert(old_alert.id)
+
                     client.send_alert(
                         resource=b.origin,
                         event=state['event'],
