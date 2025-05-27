@@ -54,9 +54,9 @@ def cli(obj, alert, severity, timeout, purge):
 
     if alert:
         with click.progressbar(heartbeats, label=f'Alerting {len(heartbeats)} heartbeats') as bar:
-            alerts = client.get_alerts(query=[('environment', 'Heartbeats')], page_size=len(heartbeats))
+            alerts = client.get_alerts(query=[('event', '~Heartbeat')], page_size='ALL')
             for b in bar:
-                want_environment = b.attributes.pop('environment', 'Heartbeats')
+                want_environment = 'Heartbeats'
                 want_severity = b.attributes.pop('severity', severity)
                 want_service = b.attributes.pop('service', ['Alerta'])
                 want_group = b.attributes.pop('group', 'System')
@@ -82,44 +82,15 @@ def cli(obj, alert, severity, timeout, purge):
                 }
 
                 state = state_map[b.status]
-                alert_exists = False
-                for alert in alerts:
-                    if alert.environment == want_environment and alert.resource == b.origin:
-                        alert_exists = True
-                        if state['event'] != alert.event:
-                            client.send_alert(
-                                resource=b.origin,
-                                event=state['event'],
-                                environment=want_environment,
-                                severity=state['severity'],
-                                correlate=['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
-                                service=want_service,
-                                group=want_group,
-                                value=state['value'],
-                                text=state['text'],
-                                tags=b.tags,
-                                attributes=b.attributes,
-                                origin=origin(),
-                                type='heartbeatAlert',
-                                timeout=timeout,
-                                customer=b.customer
-                            )
+                alert = None
+                # Find heartbeat alert in existing alerts
+                for a in alerts:
+                    if a.environment == want_environment and a.resource == b.origin:
+                        alert = alerts.pop(alerts.index(a))
                         break
-                if not alert_exists:
-                    old_alerts = client.get_alerts(
-                        query=[
-                            ('environment', 'Production'),
-                            ('event', 'HeartbeatFail'),
-                            ('event', 'HeartbeatSlow'),
-                            ('event', 'HeartbeatOK'),
-                            ('resource', b.origin)
-                        ],
-                        page_size=len(heartbeats)
-                    )
 
-                    for old_alert in old_alerts:
-                        client.delete_alert(old_alert.id)
-
+                # Only send in new/updated alert
+                if alert is None or state['event'] != alert.event:
                     client.send_alert(
                         resource=b.origin,
                         event=state['event'],
@@ -137,3 +108,8 @@ def cli(obj, alert, severity, timeout, purge):
                         timeout=timeout,
                         customer=b.customer
                     )
+
+        # Remove unused/old heartbeat alerts, there is no heartbeat matching the alert
+        with click.progressbar(alerts, label=f'Removing {len(alerts)} old alerts') as bar:
+            for alert in bar:
+                client.delete_alert(alert.id)
