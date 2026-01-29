@@ -33,7 +33,7 @@ def cli(obj, alert, severity, timeout, purge):
         )
 
     if obj['output'] == 'json':
-        r = client.http.get('/heartbeats')
+        r = client.http.get('/heartbeats?page-size=ALL')
         heartbeats = [Heartbeat.parse(hb) for hb in r['heartbeats']]
         click.echo(json.dumps(r['heartbeats'], sort_keys=True, indent=4, ensure_ascii=False))
     else:

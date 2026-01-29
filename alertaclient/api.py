@@ -107,6 +107,9 @@ class Client:
 
     def delete_alert(self, id):
         return self.http.delete('/alert/%s' % id)
+    
+    def delete_alerts(self, ids):
+        return self.http.delete('/alerts?%s' % '&'.join([f'id={id}'for id in ids]))
 
     def search(self, query=None, page=1, page_size=None):
         return self.get_alerts(query, page, page_size)
