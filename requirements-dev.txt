@@ -1,7 +1,7 @@
 mypy==1.10.1
 pre-commit==3.3.3
 pylint==3.2.5
-pytest-cov
 pytest>=5.4.3
+pytest-cov
 python-dotenv
 requests_mock

@@ -1,7 +1,7 @@
+import re
 from datetime import datetime, timedelta
 
 from alertaclient.utils import DateTime
-import re
 
 DEFAULT_MAX_LATENCY = 2000  # ms
 
