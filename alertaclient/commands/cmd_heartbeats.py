@@ -54,11 +54,11 @@ def cli(obj, alert, severity, timeout, purge):
 
     if alert:
         with click.progressbar(heartbeats, label=f'Checking {len(heartbeats)} heartbeats') as bar:
-            alerts = client.get_alerts(query=[('environment', 'Heartbeats')], page_size=len(heartbeats))
+            alerts = client.get_alerts(query=[('event', '~Heartbeat')], page_size='ALL')
             new_alerts = []
 
             for b in bar:
-                want_environment = b.attributes.pop('environment', 'Heartbeats')
+                want_environment = 'Heartbeats'
                 want_severity = b.attributes.pop('severity', severity)
                 want_service = b.attributes.pop('service', ['Alerta'])
                 want_group = b.attributes.pop('group', 'System')
@@ -111,7 +111,7 @@ def cli(obj, alert, severity, timeout, purge):
                         }
                     )
 
-        number_of_co = 100
+        number_of_co = 50
         number_of_alerts = len(new_alerts)
         number_of_sends = number_of_alerts // number_of_co
         alert_groups = [new_alerts[i * number_of_co:(i + 1) * number_of_co] for i in range(number_of_sends)]
@@ -121,3 +121,14 @@ def cli(obj, alert, severity, timeout, purge):
         with click.progressbar(alert_groups, label=f'Alerting {len(new_alerts)} heartbeats') as bar:
             for b in bar:
                 client.send_alerts(b)
+
+        
+        alerts = [alert.id for alert in alerts]            
+        number_of_deletes = len(alerts)
+        number_of_delete_sends = number_of_deletes // number_of_co
+        delete_groups = [alerts[i * number_of_co:(i + 1) * number_of_co] for i in range(number_of_delete_sends)]
+        if number_of_deletes % number_of_co:
+            delete_groups.append(alerts[number_of_co * number_of_delete_sends:number_of_co * number_of_delete_sends + number_of_deletes % number_of_co])
+        with click.progressbar(delete_groups, label=f'Removing {len(alerts)} old alerts') as bar:
+            for delete_group in bar:
+                client.delete_alerts(delete_group)
