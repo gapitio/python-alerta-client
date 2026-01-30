@@ -56,8 +56,8 @@ jobs:
         run: |
           python3 -m pip install --upgrade build
           python3 -m build
-          zip alerta-api.zip -r dist/*
-          tar cvfz alerta-api.tar.gz dist/*
+          zip alerta-client.zip -r dist/*
+          tar cvfz alerta-client.tar.gz dist/*
       - name: Release
         id: create-release
         uses: softprops/action-gh-release@v2
@@ -68,8 +68,8 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            ./alerta-api.zip
-            ./alerta-api.tar.gz
+            ./alerta-client.zip
+            ./alerta-client.tar.gz
 
       - uses: act10ns/slack@v2
         with:
