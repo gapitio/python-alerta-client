@@ -122,8 +122,7 @@ def cli(obj, alert, severity, timeout, purge):
             for b in bar:
                 client.send_alerts(b)
 
-        
-        alerts = [alert.id for alert in alerts]            
+        alerts = [alert.id for alert in alerts]
         number_of_deletes = len(alerts)
         number_of_delete_sends = number_of_deletes // number_of_co
         delete_groups = [alerts[i * number_of_co:(i + 1) * number_of_co] for i in range(number_of_delete_sends)]

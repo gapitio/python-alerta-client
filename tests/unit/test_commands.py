@@ -85,32 +85,32 @@ class CommandsTestCase(unittest.TestCase):
     def test_heartbeats_cmd(self, m):
 
         heartbeats_response = {
-          "heartbeats": [
-            {
-              "attributes": {
-                "environment": "Infrastructure",
-                "severity": "major",
-                "service": ["Internal"],
-                "group": "Heartbeats",
-                "region": "EU"
-              },
-              "createTime": "2020-03-10T20:25:54.541Z",
-              "customer": None,
-              "href": "http://127.0.0.1/heartbeat/52c202e8-d949-45ed-91e0-cdad4f37de73",
-              "id": "52c202e8-d949-45ed-91e0-cdad4f37de73",
-              "latency": 0,
-              "maxLatency": 2000,
-              "origin": "monitoring-01",
-              "receiveTime": "2020-03-10T20:25:54.541Z",
-              "since": 204,
-              "status": "expired",
-              "tags": [],
-              "timeout": 90,
-              "type": "Heartbeat"
-            }
-          ],
-          "status": "ok",
-          "total": 1
+            'heartbeats': [
+                {
+                    'attributes': {
+                        'environment': 'Infrastructure',
+                        'severity': 'major',
+                        'service': ['Internal'],
+                        'group': 'Heartbeats',
+                        'region': 'EU'
+                    },
+                    'createTime': '2020-03-10T20:25:54.541Z',
+                    'customer': None,
+                    'href': 'http://127.0.0.1/heartbeat/52c202e8-d949-45ed-91e0-cdad4f37de73',
+                    'id': '52c202e8-d949-45ed-91e0-cdad4f37de73',
+                    'latency': 0,
+                    'maxLatency': 2000,
+                    'origin': 'monitoring-01',
+                    'receiveTime': '2020-03-10T20:25:54.541Z',
+                    'since': 204,
+                    'status': 'expired',
+                    'tags': [],
+                    'timeout': 90,
+                    'type': 'Heartbeat'
+                }
+            ],
+            'status': 'ok',
+            'total': 1
         }
 
         heartbeat_alert_response = """
@@ -169,7 +169,7 @@ class CommandsTestCase(unittest.TestCase):
         }
         """
 
-        empty_alerts_response="""
+        empty_alerts_response = """
         {
           "alerts":[],
           "status": "ok"
@@ -182,7 +182,7 @@ class CommandsTestCase(unittest.TestCase):
         result = self.runner.invoke(heartbeats_cmd, ['--alert'], obj=self.obj)
         self.assertEqual(result.exit_code, 0, result.exception)
         self.assertIn('monitoring-01', result.output)
-        
+
         data = m.last_request.json()[0]
         self.assertEqual(data['environment'], 'Heartbeats')
         self.assertEqual(data['severity'], 'major')
