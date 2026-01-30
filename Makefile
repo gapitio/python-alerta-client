@@ -1,14 +1,15 @@
 #!make
 
 VENV=venv
-PYTHON=$(VENV)/bin/python
+PYTHON=$(VENV)/bin/python3
 PIP=$(VENV)/bin/pip --disable-pip-version-check
-PYLINT=$(VENV)/bin/pylint
+FLAKE8=$(VENV)/bin/flake8
 MYPY=$(VENV)/bin/mypy
-BLACK=$(VENV)/bin/black
 TOX=$(VENV)/bin/tox
 PYTEST=$(VENV)/bin/pytest
+DOCKER_COMPOSE=docker compose
 PRE_COMMIT=$(VENV)/bin/pre-commit
+BUILD=$(VENV)/bin/build
 WHEEL=$(VENV)/bin/wheel
 TWINE=$(VENV)/bin/twine
 GIT=git
@@ -18,60 +19,58 @@ GIT=git
 -include .env .env.local .env.*.local
 
 ifndef PROJECT
-$(error PROJECT is not set)
+    $(error PROJECT is not set)
 endif
 
+PYPI_REPOSITORY ?= pypi
 VERSION=$(shell cut -d "'" -f 2 $(PROJECT)/version.py)
-
-PKG_SDIST=dist/*-$(VERSION).tar.gz
-PKG_WHEEL=dist/*-$(VERSION)-*.whl
 
 all:	help
 
-$(PIP):
+$(VENV):
 	python3 -m venv $(VENV)
 
-$(PYLINT): $(PIP)
-	$(PIP) install pylint
+$(FLAKE8): $(VENV)
+	$(PIP) install flake8
 
-$(MYPY): $(PIP)
+$(MYPY): $(VENV)
 	$(PIP) install mypy
 
-$(BLACK): $(PIP)
-	$(PIP) install black
-
-$(TOX): $(PIP)
+$(TOX): $(VENV)
 	$(PIP) install tox
 
-$(PYTEST): $(PIP)
-	$(PIP) install pytest
+$(PYTEST): $(VENV)
+	$(PIP) install pytest pytest-cov
 
-$(PRE_COMMIT): $(PIP)
+$(PRE_COMMIT): $(VENV)
 	$(PIP) install pre-commit
+	$(PRE_COMMIT) install
 
-$(WHEEL): $(PIP)
-	$(PIP) install wheel
+$(BUILD): $(VENV)
+	$(PIP) install --upgrade build
 
-$(TWINE): $(PIP)
-	$(PIP) install wheel twine
+$(WHEEL): $(VENV)
+	$(PIP) install --upgrade wheel
+
+$(TWINE): $(VENV)
+	$(PIP) install --upgrade wheel twine
 
 ifdef TOXENV
-toxparams?=-e $(TOXENV)
+    toxparams?=-e $(TOXENV)
 endif
 
-## format			- Code formatter.
-format: $(BLACK)
-	$(BLACK) -l120 -S -v $(PROJECT)
-
-## lint			- Lint and type checking.
-lint: $(PYLINT) $(MYPY) $(BLACK)
-	$(PYLINT) --rcfile pylintrc $(PROJECT)
-	$(MYPY) $(PROJECT)/
-	$(BLACK) -l120 -S --check -v $(PROJECT) || true
+## install		- Install dependencies.
+install: $(VENV)
+	$(PIP) install -r requirements.txt
 
 ## hooks			- Run pre-commit hooks.
 hooks: $(PRE_COMMIT)
-	$(PRE_COMMIT) run -a
+	$(PRE_COMMIT) run --all-files --show-diff-on-failure
+
+## lint			- Lint and type checking.
+lint: $(FLAKE8) $(MYPY)
+	$(FLAKE8) $(PROJECT)/
+	$(MYPY) $(PROJECT)/
 
 ## test			- Run all tests.
 test: test.unit test.integration
@@ -82,10 +81,11 @@ test.unit: $(TOX) $(PYTEST)
 
 ## test.integration	- Run integration tests.
 test.integration:
-	docker-compose -f docker-compose.ci.yaml rm --stop --force
-	docker-compose -f docker-compose.ci.yaml build sut
-	docker-compose -f docker-compose.ci.yaml up --exit-code-from sut
-	docker-compose -f docker-compose.ci.yaml rm --stop --force
+	$(DOCKER_COMPOSE) -f docker-compose.ci.yaml rm --stop --force
+	$(DOCKER_COMPOSE) -f docker-compose.ci.yaml pull
+	$(DOCKER_COMPOSE) -f docker-compose.ci.yaml build sut
+	$(DOCKER_COMPOSE) -f docker-compose.ci.yaml up --exit-code-from sut
+	$(DOCKER_COMPOSE) -f docker-compose.ci.yaml rm --stop --force
 
 ## run			- Run application.
 run:
@@ -97,16 +97,13 @@ tag:
 	$(GIT) push --tags
 
 ## build			- Build package.
-build: $(PIP) $(WHEEL) $(PKG_SDIST) $(PKG_WHEEL)
-
-$(PKG_SDIST):
-	$(PYTHON) setup.py sdist
-$(PKG_WHEEL):
-	$(PYTHON) setup.py bdist_wheel
+build: $(BUILD)
+	$(PYTHON) -m build
 
 ## upload			- Upload package to PyPI.
 upload: $(TWINE)
-	$(TWINE) upload dist/*
+	$(TWINE) check dist/*
+	$(TWINE) upload --repository $(PYPI_REPOSITORY) --verbose dist/*
 
 ## clean			- Clean source.
 clean:

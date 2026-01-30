@@ -84,40 +84,38 @@ class CommandsTestCase(unittest.TestCase):
     @requests_mock.mock()
     def test_heartbeats_cmd(self, m):
 
-        heartbeats_response = """
-        {
-          "heartbeats": [
-            {
-              "attributes": {
-                "environment": "Infrastructure",
-                "severity": "major",
-                "service": ["Internal"],
-                "group": "Heartbeats",
-                "region": "EU"
-              },
-              "createTime": "2020-03-10T20:25:54.541Z",
-              "customer": null,
-              "href": "http://127.0.0.1/heartbeat/52c202e8-d949-45ed-91e0-cdad4f37de73",
-              "id": "52c202e8-d949-45ed-91e0-cdad4f37de73",
-              "latency": 0,
-              "maxLatency": 2000,
-              "origin": "monitoring-01",
-              "receiveTime": "2020-03-10T20:25:54.541Z",
-              "since": 204,
-              "status": "expired",
-              "tags": [],
-              "timeout": 90,
-              "type": "Heartbeat"
-            }
-          ],
-          "status": "ok",
-          "total": 1
+        heartbeats_response = {
+            'heartbeats': [
+                {
+                    'attributes': {
+                        'environment': 'Infrastructure',
+                        'severity': 'major',
+                        'service': ['Internal'],
+                        'group': 'Heartbeats',
+                        'region': 'EU'
+                    },
+                    'createTime': '2020-03-10T20:25:54.541Z',
+                    'customer': None,
+                    'href': 'http://127.0.0.1/heartbeat/52c202e8-d949-45ed-91e0-cdad4f37de73',
+                    'id': '52c202e8-d949-45ed-91e0-cdad4f37de73',
+                    'latency': 0,
+                    'maxLatency': 2000,
+                    'origin': 'monitoring-01',
+                    'receiveTime': '2020-03-10T20:25:54.541Z',
+                    'since': 204,
+                    'status': 'expired',
+                    'tags': [],
+                    'timeout': 90,
+                    'type': 'Heartbeat'
+                }
+            ],
+            'status': 'ok',
+            'total': 1
         }
-        """
 
         heartbeat_alert_response = """
         {
-          "alert": {
+          "alerts": [{
             "attributes": {},
             "correlate": [
               "HeartbeatFail",
@@ -166,25 +164,31 @@ class CommandsTestCase(unittest.TestCase):
             "type": "heartbeatAlert",
             "updateTime": "2020-03-10T21:55:07.916Z",
             "value": "22ms"
-          },
-          "id": "6cfbc30f-c2d6-4edf-b672-841070995206",
+          }],
           "status": "ok"
         }
         """
 
-        m.get('/heartbeats', text=heartbeats_response)
-        m.post('/alert', text=heartbeat_alert_response)
+        empty_alerts_response = """
+        {
+          "alerts":[],
+          "status": "ok"
+        }
+        """
+
+        m.get('/heartbeats', json=heartbeats_response)
+        m.get('/alerts', text=empty_alerts_response)
+        m.post('/alerts', text=heartbeat_alert_response)
         result = self.runner.invoke(heartbeats_cmd, ['--alert'], obj=self.obj)
         self.assertEqual(result.exit_code, 0, result.exception)
         self.assertIn('monitoring-01', result.output)
 
-        history = m.request_history
-        data = history[1].json()
-        self.assertEqual(data['environment'], 'Infrastructure')
+        data = m.last_request.json()[0]
+        self.assertEqual(data['environment'], 'Heartbeats')
         self.assertEqual(data['severity'], 'major')
         self.assertEqual(data['service'], ['Internal'])
         self.assertEqual(data['group'], 'Heartbeats')
-        self.assertEqual(data['attributes'], {'region': 'EU'})
+        self.assertEqual(data['attributes'], {'environment': 'Infrastructure', 'region': 'EU'})
 
     @requests_mock.mock()
     def test_whoami_cmd(self, m):

@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Install dependencies
+        id: install-deps
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install flake8 pytest
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install .
+      - name: Pre-commit hooks
+        id: hooks
+        run: |
+          pre-commit run -a --show-diff-on-failure
+      - name: Test with pytest
+        id: test
+        run: |
+          pytest --cov=alertaclient tests/unit
+      - uses: act10ns/slack@v2
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+        if: failure()
+
+  release:
+    name: Publish
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Build
+        id: build
+        run: |
+          python3 -m pip install --upgrade build
+          python3 -m build
+          zip alerta-api.zip -r dist/*
+          tar cvfz alerta-api.tar.gz dist/*
+      - name: Release
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref }}
+          name: Release ${{ github.ref }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            ./alerta-api.zip
+            ./alerta-api.tar.gz
+
+      - uses: act10ns/slack@v2
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+
+      - name: Test Install
+        run: |
+          python3 -m pip install --upgrade alerta
+          python3 -m pip freeze

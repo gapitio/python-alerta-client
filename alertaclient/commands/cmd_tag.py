@@ -4,7 +4,7 @@ from alertaclient.utils import build_query
 
 
 @click.command('tag', short_help='Tag alerts')
-@click.option('--ids', '-i', metavar='UUID', multiple=True, help='List of alert IDs (can use short 8-char id)')
+@click.option('--ids', '-i', metavar='ID', multiple=True, help='List of alert IDs (can use short 8-char id)')
 @click.option('--query', '-q', 'query', metavar='QUERY', help='severity:"warning" AND resource:web')
 @click.option('--filter', '-f', 'filters', metavar='FILTER', multiple=True, help='KEY=VALUE eg. serverity=warning resource=web')
 @click.option('--tag', '-T', 'tags', required=True, multiple=True, help='List of tags')
@@ -22,6 +22,6 @@ def cli(obj, ids, query, filters, tags):
         total, _, _ = client.get_count(query)
         ids = [a.id for a in client.get_alerts(query)]
 
-    with click.progressbar(ids, label='Tagging {} alerts'.format(total)) as bar:
+    with click.progressbar(ids, label=f'Tagging {total} alerts') as bar:
         for id in bar:
             client.tag_alert(id, tags)

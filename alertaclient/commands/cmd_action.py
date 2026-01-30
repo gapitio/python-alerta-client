@@ -5,7 +5,7 @@ from alertaclient.utils import action_progressbar, build_query
 
 @click.command('action', short_help='Action alerts')
 @click.option('--action', '-a', metavar='ACTION', help='Custom action (user-defined)')
-@click.option('--ids', '-i', metavar='UUID', multiple=True, help='List of alert IDs (can use short 8-char id)')
+@click.option('--ids', '-i', metavar='ID', multiple=True, help='List of alert IDs (can use short 8-char id)')
 @click.option('--query', '-q', 'query', metavar='QUERY', help='severity:"warning" AND resource:web')
 @click.option('--filter', '-f', 'filters', metavar='FILTER', multiple=True, help='KEY=VALUE eg. serverity=warning resource=web')
 @click.option('--text', help='Message associated with action')
@@ -23,5 +23,5 @@ def cli(obj, action, ids, query, filters, text):
         total, _, _ = client.get_count(query)
         ids = [a.id for a in client.get_alerts(query)]
 
-    label = 'Action ({}) {} alerts'.format(action, total)
+    label = f'Action ({action}) {total} alerts'
     action_progressbar(client, action=action, ids=ids, label=label, text=text)

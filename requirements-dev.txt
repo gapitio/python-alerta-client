@@ -1,9 +1,7 @@
-mypy==0.790
-pre-commit==2.9.2
-pylint==2.6.0
-pytest-cov
+mypy==1.10.1
+pre-commit==3.3.3
+pylint==3.2.5
 pytest>=5.4.3
+pytest-cov
 python-dotenv
 requests_mock
-twine
-wheel

@@ -4,7 +4,7 @@ from alertaclient.utils import action_progressbar, build_query
 
 
 @click.command('ack', short_help='Acknowledge alerts')
-@click.option('--ids', '-i', metavar='UUID', multiple=True, help='List of alert IDs (can use short 8-char id)')
+@click.option('--ids', '-i', metavar='ID', multiple=True, help='List of alert IDs (can use short 8-char id)')
 @click.option('--query', '-q', 'query', metavar='QUERY', help='severity:"warning" AND resource:web')
 @click.option('--filter', '-f', 'filters', metavar='FILTER', multiple=True, help='KEY=VALUE eg. serverity=warning resource=web')
 @click.option('--text', help='Message associated with status change')
@@ -22,4 +22,4 @@ def cli(obj, ids, query, filters, text):
         total, _, _ = client.get_count(query)
         ids = [a.id for a in client.get_alerts(query)]
 
-    action_progressbar(client, action='ack', ids=ids, label='Acking {} alerts'.format(total), text=text)
+    action_progressbar(client, action='ack', ids=ids, label=f'Acking {total} alerts', text=text)

@@ -18,15 +18,15 @@ def cli(obj, purge):
         timezone = obj['timezone']
         headers = {
             'id': 'ID', 'priority': 'P', 'environment': 'ENVIRONMENT', 'service': 'SERVICE', 'resource': 'RESOURCE',
-            'event': 'EVENT', 'group': 'GROUP', 'tags': 'TAGS', 'customer': 'CUSTOMER', 'startTime': 'START', 'endTime': 'END',
-            'duration': 'DURATION', 'user': 'USER', 'createTime': 'CREATED', 'text': 'COMMENT',
-            'status': 'STATUS', 'remaining': 'REMAINING'
+            'event': 'EVENT', 'group': 'GROUP', 'tags': 'TAGS', 'origin': 'ORIGIN', 'customer': 'CUSTOMER',
+            'startTime': 'START', 'endTime': 'END', 'duration': 'DURATION', 'user': 'USER',
+            'createTime': 'CREATED', 'text': 'COMMENT', 'status': 'STATUS', 'remaining': 'REMAINING'
         }
         blackouts = client.get_blackouts()
         click.echo(tabulate([b.tabular(timezone) for b in blackouts], headers=headers, tablefmt=obj['output']))
 
         expired = [b for b in blackouts if b.status == 'expired']
         if purge:
-            with click.progressbar(expired, label='Purging {} blackouts'.format(len(expired))) as bar:
+            with click.progressbar(expired, label=f'Purging {len(expired)} blackouts') as bar:
                 for b in bar:
                     client.delete_blackout(b.id)

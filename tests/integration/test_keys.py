@@ -7,7 +7,7 @@ from alertaclient.models.enums import Scope
 class AlertTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.client = Client(endpoint='http://api:8080', key='demo-key')
+        self.client = Client(endpoint='http://alerta:8080/api', key='demo-key')
 
     def test_key(self):
         api_key = self.client.create_key(
@@ -23,8 +23,9 @@ class AlertTestCase(unittest.TestCase):
         self.assertEqual(api_key.text, 'Updated Ops API Key')
 
         api_key = self.client.create_key(
-            username='key@alerta.io', scopes=[Scope.admin], text='Admin API Key'
+            username='key@alerta.io', scopes=[Scope.admin], text='Admin API Key', key='admin-key'
         )
+        self.assertEqual(api_key.key, 'admin-key')
 
         api_keys = self.client.get_keys(query=[('user', 'key@alerta.io')])
         self.assertEqual(len(api_keys), 2)
