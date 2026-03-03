@@ -71,7 +71,7 @@ class Client:
 
     def send_alerts(self, data: list):
         r = self.http.post('/alerts', data)
-        alerts = [Alert.parse(alert) for alert in r['alerts']] if 'alerts' in r else None
+        alerts = [Alert.parse(alert) for alert in r['alerts']] if 'alerts' in r else []
         return [alert.id for alert in alerts], alerts, r.get('message', None)
 
     def get_alert(self, id):
