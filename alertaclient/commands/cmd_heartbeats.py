@@ -56,6 +56,7 @@ def cli(obj, alert, severity, timeout, purge):
         with click.progressbar(heartbeats, label=f'Checking {len(heartbeats)} heartbeats') as bar:
             alerts = client.get_alerts(query=[('event', '~Heartbeat')], page_size='ALL')
             new_alerts = []
+            event = 'HeartbeatAlert'
 
             for b in bar:
                 want_environment = 'Heartbeats'
@@ -64,19 +65,16 @@ def cli(obj, alert, severity, timeout, purge):
                 want_group = b.attributes.pop('group', 'System')
                 state_map = {
                     'expired': {
-                        'event': 'HeartbeatFail',
                         'value': f'{b.since}',
                         'text': f'Heartbeat not received in {b.timeout} seconds',
                         'severity': want_severity
                     },
                     'slow': {
-                        'event': 'HeartbeatSlow',
                         'value': f'{b.latency}ms',
                         'text': f'Heartbeat took more than {b.max_latency}ms to be processed',
                         'severity': want_severity
                     },
                     'ok': {
-                        'event': 'HeartbeatOK',
                         'value': '',
                         'text': 'Heartbeat OK',
                         'severity': default_normal_severity
@@ -86,18 +84,17 @@ def cli(obj, alert, severity, timeout, purge):
                 state = state_map[b.status]
                 found_alert = None
                 for a in alerts:
-                    if a.environment == want_environment and a.resource == b.origin:
+                    if a.environment == want_environment and a.resource == b.origin and a.event == event:
                         found_alert = alerts.pop(alerts.index(a))
                         break
 
-                if found_alert is None or state['event'] != found_alert.event:
+                if found_alert is None or event != found_alert.event or state['severity'] != found_alert.severity:
                     new_alerts.append(
                         {
                             'resource': b.origin,
-                            'event': state['event'],
+                            'event': event,
                             'environment': want_environment,
                             'severity': state['severity'],
-                            'correlate': ['HeartbeatFail', 'HeartbeatSlow', 'HeartbeatOK'],
                             'service': want_service,
                             'group': want_group,
                             'value': state['value'],
